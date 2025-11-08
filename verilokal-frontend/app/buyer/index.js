@@ -1,5 +1,5 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
 import { router } from "expo-router";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function BuyerHome() {
   return (
@@ -10,7 +10,7 @@ export default function BuyerHome() {
       {/* Button to open QR Scanner */}
       <Pressable
         style={styles.scanButton}
-        onPress={() => router.push("/buyer/qrScanner")}
+        onPress={() => router.push("/buyer/qrscanner")}
       >
         <Text style={styles.scanButtonText}>Scan QR Code</Text>
       </Pressable>

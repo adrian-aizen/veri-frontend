@@ -1,33 +1,28 @@
-import { View, Text, FlatList, Pressable, StyleSheet, Modal, Image } from "react-native";
-import { useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
 import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import { FlatList, Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function BusinessDashboard() {
-  const [products] = useState([
-    {
-      id: "1",
-      name: "Pine Wood Carving",
-      type: "Woodcraft",
-      materials: "Wood",
-      origin: "Baguio City",
-      productionDate: "2025-01-12",
-      description: "Hand-carved pinewood sculpture made by local artisans.",
-      certificate: "FairTrade_License.pdf",
-      image: require("../../assets/products/pinecarving.jpg"),
-    },
-    {
-      id: "2",
-      name: "Inabel Woven Scarf",
-      type: "Textile",
-      materials: "Textile yes",
-      origin: "La Union",
-      productionDate: "2025-01-15",
-      description: "Traditional Ilocano Inabel scarf handcrafted in La Union.",
-      certificate: "DTI_Registration.pdf",
-      image: require("../../assets/products/inabel.webp"),
-    },
-  ]);
-
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+   useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        const res = await axios.get("http://localhost:3000/api/products/my-products", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setProducts(res.data);
+      } catch (err) {
+        console.error("Error loading products:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts(); 
+  }, []);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -67,8 +62,8 @@ export default function BusinessDashboard() {
             {selectedProduct && (
               <>
                 {/* Product Image */}
-                <Image source={selectedProduct.image} style={styles.modalImage} />
-
+                <Image source={{uri: `http://localhost:3000/${selectedProduct?.product_image?.replace(/\\/g, "/")}`}} style={styles.modalImage}/>
+              
                 <Text style={styles.modalTitle}>{selectedProduct.name}</Text>
                 <Text>Type: {selectedProduct.type}</Text>
                 <Text>Materials: {selectedProduct.materials}</Text>
@@ -77,14 +72,16 @@ export default function BusinessDashboard() {
                 <Text style={{ marginTop: 8, fontWeight: "600" }}>Description:</Text>
                 <Text>{selectedProduct.description}</Text>
 
-                <Text style={{ marginTop: 8, fontWeight: "600" }}>Certificate:</Text>
-                <Text>{selectedProduct.certificate}</Text>
-
                 <View style={styles.qrContainer}>
-                  <View style={styles.qrPlaceholder} />
+                  {selectedProduct?.qr_code && (
+                    <Image
+                      source={{ uri: `http://localhost:3000/${selectedProduct.qr_code.replace(/\\/g, "/")}` }}
+                      style={{ width: 160, height: 160, borderRadius: 8 }}
+                      resizeMode="contain"
+                    />
+                  )}
                   <Text style={styles.qrLabel}>Product QR Code</Text>
                 </View>
-
                 <Pressable
                   style={styles.closeButton}
                   onPress={() => setModalVisible(false)}

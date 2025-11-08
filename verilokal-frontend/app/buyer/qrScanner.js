@@ -1,69 +1,180 @@
-import { View, Text, StyleSheet, Pressable } from "react-native";
-import { useState, useEffect } from "react";
-import { BarCodeScanner } from "expo-barcode-scanner";
-import { router } from "expo-router";
+"use client";
 
-export default function ScanQR() {
-  const [hasPermission, setHasPermission] = useState(null);
-  const [scanned, setScanned] = useState(false);
+import axios from "axios";
+import { useRef, useState } from "react";
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await BarCodeScanner.requestPermissionsAsync();
-      setHasPermission(status === "granted");
-    })();
-  }, []);
+export default function ProductScanner() {
+  const [isScanning, setIsScanning] = useState(false);
+  const [qrData, setQrData] = useState(null);
+  const [product, setProduct] = useState(null);
+  const [productDetails, setProductDetails] = useState(null);
+  const [error, setError] = useState(null);
 
-  const handleScan = ({ data }) => {
-    setScanned(true);
+  const Html5QrcodeRef = useRef(null);
 
-    // ✅ data could be just product ID or full URL
-    let productId = data;
+  const startScanner = async () => {
+    setError(null);
+    setProduct(null);
+    setQrData(null);
+    setProductDetails(null);
+    setIsScanning(true);
 
-    // If backend sends full URL e.g. https://api.verilokal.com/product/123
-    if (data.startsWith("http")) {
-      productId = data.split("/").pop();
+    try {
+      const { Html5Qrcode } = await import("html5-qrcode");
+
+      const qrCodeScanner = new Html5Qrcode("qr-reader");
+      Html5QrcodeRef.current = qrCodeScanner;
+
+      await qrCodeScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        async (decodedText) => {
+          try {
+            setQrData(decodedText);
+            if (Html5QrcodeRef.current) {
+              await Html5QrcodeRef.current.stop();
+            }
+            setIsScanning(false);
+
+            const [product_id_str, blockchain_hash] = decodedText.split("|");
+            const product_id = Number(product_id_str);
+
+            if (!product_id || !blockchain_hash) {
+              throw new Error("Invalid QR data format");
+            }
+
+            console.log("Sending to backend:", { product_id, blockchain_hash });
+            let res;
+            try {
+              res = await axios.post(
+                "http://localhost:3000/api/products/verify",
+                { product_id, blockchain_hash }
+              );
+              console.log("Backend verification response:", res.data);
+              setProduct(res.data);
+              setError(null);
+            } catch (axiosErr) {
+              console.error(
+                "Backend error:",
+                axiosErr.response?.data || axiosErr.message
+              );
+              setError(
+                axiosErr.response?.data?.message ||
+                  "Backend verification failed"
+              );
+              return;
+            }
+
+            if (res.data.verified) {
+              try {
+                const allRes = await axios.get(
+                  "http://localhost:3000/api/products"
+                );
+                const matched = allRes.data.find((p) => p.id === product_id);
+                if (matched) {
+                  setProductDetails(matched);
+                  setError(null);
+                } else {
+                  setError("Verified but product not found in list");
+                }
+              } catch {
+                setError("Verified but failed to fetch product details");
+              }
+            }
+          } catch (err) {
+            console.error("Processing error:", err);
+            setError(err.message || "Invalid QR format or backend error");
+          }
+        },
+        (scanError) => {
+          console.warn("Scan error:", scanError);
+        }
+      );
+    } catch (err) {
+      console.error("Camera start failed:", err);
+      setError("Failed to access camera");
+      setIsScanning(false);
     }
-
-    // Navigate to product details page
-    router.push(`/buyer/product?id=${productId}`);
   };
 
-  if (hasPermission === null) {
-    return <Text style={styles.centerText}>Requesting camera permission...</Text>;
-  }
-  if (hasPermission === false) {
-    return <Text style={styles.centerText}>No camera access.</Text>;
-  }
+  const stopScanner = async () => {
+    if (Html5QrcodeRef.current) {
+      await Html5QrcodeRef.current.stop().catch(() => {});
+      setIsScanning(false);
+    }
+  };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Scan Product QR Code</Text>
+    <div className="flex flex-col items-center p-4">
+      <h2 className="text-xl font-semibold mb-4">QR Product Verification</h2>
 
-      <BarCodeScanner
-        onBarCodeScanned={scanned ? undefined : handleScan}
-        style={styles.scanner}
-      />
-
-      {scanned && (
-        <Pressable style={styles.button} onPress={() => setScanned(false)}>
-          <Text style={styles.buttonText}>Scan Again</Text>
-        </Pressable>
+      {!isScanning ? (
+        <button
+          onClick={startScanner}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow"
+        >
+          Open Scanner
+        </button>
+      ) : (
+        <button
+          onClick={stopScanner}
+          className="bg-red-500 text-white px-4 py-2 rounded-lg shadow"
+        >
+          Stop Scanner
+        </button>
       )}
-    </View>
+
+      <div
+        id="qr-reader"
+        style={{ width: "300px", marginTop: "20px" }}
+      ></div>
+
+      {qrData && (
+        <p className="mt-4 text-gray-600 break-words">
+          <strong>Scanned Data:</strong> {qrData}
+        </p>
+      )}
+
+      {error && <p className="mt-4 text-red-500">{error}</p>}
+      {product && product.verified && (
+        <div className="mt-4 text-green-600 font-semibold">
+          ✅ {product.message}
+        </div>
+      )}
+
+      {product && !product.verified && (
+        <div className="mt-4 text-red-500 font-semibold">
+          ❌ {product.message}
+        </div>
+      )}
+      {productDetails && (
+        <div className="bg-gray-100 rounded-xl p-4 mt-6 shadow w-full max-w-md">
+          <h3 className="text-lg font-bold mb-2">{productDetails.name}</h3>
+          <p className="text-gray-700 mb-1">
+            <strong>Description:</strong> {productDetails.description}
+          </p>
+          <p className="text-gray-700 mb-1">
+            <strong>Type:</strong> {productDetails.type}
+          </p>
+          <p className="text-gray-700 mb-1">
+            <strong>Origin:</strong> {productDetails.origin}
+          </p>
+          <p className="text-gray-700 mb-1">
+            <strong>Materials:</strong> {productDetails.materials}
+          </p>
+          <p className="text-gray-700 mb-1">
+            <strong>Production Date:</strong> {productDetails.productionDate}
+          </p>
+
+          {productDetails.product_image && (
+            <img
+              src={`http://localhost:3000/${productDetails.product_image}`}
+              alt={productDetails.name}
+              className="mt-3 rounded-lg"
+            />
+          )}
+        </div>
+      )}
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  title: { fontSize: 22, fontWeight: "bold", marginBottom: 12, textAlign: "center" },
-  scanner: { flex: 1, borderRadius: 16, overflow: "hidden" },
-  button: {
-    backgroundColor: "#000",
-    padding: 14,
-    borderRadius: 8,
-    marginTop: 15,
-  },
-  buttonText: { color: "#fff", fontWeight: "600", textAlign: "center" },
-  centerText: { flex: 1, textAlign: "center", marginTop: 100, fontSize: 18 },
-});

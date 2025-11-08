@@ -1,5 +1,5 @@
-import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
+import { Text, TouchableOpacity, View } from "react-native";
 
 export default function LoginButtons() {
   const router = useRouter();
@@ -16,11 +16,11 @@ export default function LoginButtons() {
     >
       {/* Login as Buyer */}
       <TouchableOpacity
-        onPress={() => router.push("/login-buyer")}
+        onPress={() => router.push("/buyer")}
         style={{
           backgroundColor: "#38bdf8",
           paddingVertical: 12,
-          paddingHorizontal: 24,
+          paddingHorizontal: 45,
           borderRadius: 8,
           shadowColor: "#000",
           shadowOpacity: 0.2,
@@ -35,7 +35,7 @@ export default function LoginButtons() {
             fontWeight: "600",
           }}
         >
-          Login as Buyer
+          Scan
         </Text>
       </TouchableOpacity>
 
