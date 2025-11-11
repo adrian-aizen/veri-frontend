@@ -1,16 +1,27 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Image } from "react-native";
 import { useRouter, usePathname } from "expo-router";
+import { useFonts } from "expo-font";
 
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
   const links = [
-    { name: "Home", route: "/" },
-    { name: "About", route: "/about" },
-    { name: "Products", route: "/products" },
-    { name: "Contact", route: "/contact" },
+    { name: "HOME", route: "/" },
+    { name: "ABOUT", route: "/about" },
+    { name: "PRODUCTS", route: "/products" },
+    { name: "CONTACT", route: "/contact" },
   ];
+
+  const [fontsLoaded] = useFonts({
+        "Garet-Book": require("../assets/fonts/garet/Garet-Book.ttf"),
+        "Garet-Heavy": require("../assets/fonts/garet/Garet-Heavy.ttf"),
+        "Montserrat-Regular": require("../assets/fonts/Montserrat/static/Montserrat-Regular.ttf"),
+      });
+    
+       if (!fontsLoaded) {
+        return <View><Text>Loading fonts...</Text></View>;
+      }
 
   return (
     <View
@@ -18,26 +29,28 @@ export default function Navbar() {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        backgroundColor: "#1e293b",
+        backgroundColor: "rgba(255, 255, 255, 0.01)", 
         paddingHorizontal: 20,
         paddingVertical: 14,
-        borderBottomWidth: 1,
-        borderColor: "#0f172a",
+        borderBottomWidth: 0, 
+        position: "absolute", 
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1000, 
+        backdropFilter: "blur(10px)",
       }}
     >
       {/* App Title */}
-      <Text
-        style={{
-          color: "#fff",
-          fontSize: 20,
-          fontWeight: "bold",
-        }}
+      <Image
+        source={require('../assets/images/verilokal_text.png')}
+        style={{ justifyContent: "left", alignItems: "left",  width:140, height: 25, marginRight: 25,}}
       >
-        VeriLokal
-      </Text>
+
+      </Image>
 
       {/* Nav Links */}
-      <View style={{ flexDirection: "row", gap: 24 }}>
+      <View style={{ flexDirection: "row", gap: 18 }}>
         {links.map((link) => (
           <TouchableOpacity
             key={link.route}
@@ -45,9 +58,10 @@ export default function Navbar() {
           >
             <Text
               style={{
-                color: pathname === link.route ? "#38bdf8" : "#e2e8f0",
+                color: pathname === link.route ? "#d6461f" : "#000000",
                 fontWeight: pathname === link.route ? "bold" : "500",
-                fontSize: 16,
+                fontSize: 13,
+                fontFamily: "Montserrat-Regular",
               }}
             >
               {link.name}

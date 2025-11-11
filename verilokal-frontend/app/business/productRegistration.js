@@ -1,180 +1,303 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
-import * as ImagePicker from "expo-image-picker";
+import { View, Text, TextInput, Pressable, Image, ScrollView, ImageBackground, } from "react-native";
 import { useState } from "react";
-import { Alert, Platform, Pressable, ScrollView, Text, TextInput } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
+import { useFonts } from "expo-font";
 
-export default function RegisterProduct() {
-  const [name, setProductName] = useState("");
-  const [type, setType] = useState("");
-  const [materials, setMaterials] = useState("");
-  const [origin, setOrigin] = useState("");
-  const [productionDate, setProductionDate] = useState("");
-  const [description, setDescription] = useState("");
-  const [product_image, setProductImage] = useState(null);
-  const [statusMessage, setStatusMessage] = useState("");
-
+export default function ProductRegistration() {
+  const [form, setForm] = useState({
+    name: "",
+    type: "",
+    materials: "",
+    origin: "",
+    productionDate: "",
+    description: "",
+    image: null,
+  });
 
   const pickImage = async () => {
-    try {
-      if (Platform.OS === "web") {
-        const input = document.createElement("input");
-        input.type = "file";
-        input.accept = "image/*";
-        input.onchange = (event) => {
-          const file = event.target.files[0];
-          if (file) {
-            setProductImage({
-              uri: URL.createObjectURL(file),
-              file, 
-              name: file.name,
-              type: file.type,
-            });
-          }
-        };
-        input.click();
-      } else {
-        const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: true,
-          aspect: [4, 3],
-          quality: 1,
-        });
-
-        if (!result.canceled) {
-          const file = result.assets[0];
-          setProductImage({
-            uri: file.uri,
-            name: file.fileName || "photo.jpg",
-            type: file.mimeType || "image/jpeg",
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error picking file:", error);
-      Alert.alert("Error", "Could not pick image.");
-    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+    if (!result.canceled) setForm({ ...form, image: result.assets[0].uri });
   };
 
   const handleSubmit = async () => {
-    if (!name || !origin || !materials || !description || !type || !productionDate || !product_image) {
-      setMessage("All fields are required!")
-      return;
-    } 
     try {
       const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        Alert.alert("Unauthorized", "Please login first.");
-        return;
-      }
-
-      setStatusMessage("Registering product...");
-
       const formData = new FormData();
-      formData.append("name", name);
-      formData.append("origin", origin);
-      formData.append("materials", materials);
-      formData.append("description", description);
-      formData.append("type", type);
-      formData.append("productionDate", productionDate);
-
-
-      if (product_image) {
-        if (Platform.OS === "web") {
-          formData.append("product_image", product_image.file);
-        } else {
+      Object.entries(form).forEach(([key, value]) => {
+        if (key === "image" && value)
           formData.append("product_image", {
-            uri: product_image.uri,
-            name: product_image.name,
-            type: product_image.type,
+            uri: value,
+            name: "upload.jpg",
+            type: "image/jpeg",
           });
-        }
-      }
+        else formData.append(key, value);
+      });
 
-      const response = await axios.post("http://localhost:3000/api/products", formData, {
+      await axios.post("http://localhost:3000/api/products", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`,
         },
       });
 
-      console.log("Upload success:", response.data);
-      setStatusMessage("✅ Product Registered Successfully!");
-      Alert.alert("Success", "Product registered successfully!");
-
-      setProductName("");
-      setType("");
-      setMaterials("");
-      setOrigin("");
-      setProductionDate("");
-      setDescription("");
-      setProductImage(null);
-      
-    } catch (error) {
-      console.error("Error submitting form:", error.response?.data || error.message);
-      Alert.alert("Error", error.response?.data?.message || "Network or server error.");
-      setStatusMessage("❌ Failed to register product.");
+      router.push("/business");
+    } catch (err) {
+      console.error("Error submitting:", err);
     }
   };
 
+  const [fontsLoaded] = useFonts({
+    "Garet-Book": require("../../assets/fonts/garet/Garet-Book.ttf"),
+    "Garet-Heavy": require("../../assets/fonts/garet/Garet-Heavy.ttf"),
+    "Montserrat-Regular": require("../../assets/fonts/Montserrat/static/Montserrat-Regular.ttf"),
+    "Montserrat-Bold": require("../../assets/fonts/Montserrat/static/Montserrat-Bold.ttf"),
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View>
+        <Text>Loading fonts...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView contentContainerStyle={{ padding: 20 }}>
-      <Text style={{ fontSize: 24, marginBottom: 20, fontWeight: "bold" }}>Register Product</Text>
+    <ImageBackground
+      source={require("../../assets/images/homebg.png")}
+      resizeMode="cover"
+      style={{ flex: 1 }}
+    >
+      <View 
+      style={{
+        flex: 1,
+        backgroundColor: "rgba(231, 229, 226, 0.87)",
+        justifyContent: "center",
+        alignItems: "center",
+      }}>
+        <ScrollView
+          contentContainerStyle={{
+            paddingHorizontal: 27,
+            paddingVertical: 110,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 28,
+              fontWeight: "bold",
+              marginBottom: 30,
+              color: "#000",
+              fontFamily: "Garet-Heavy", 
+            }}
+          >
+            Register Product
+          </Text>
 
-      <TextInput placeholder="Product Name" value={name} onChangeText={setProductName} style={inputStyle} />
-      <TextInput placeholder="Product Type" value={type} onChangeText={setType} style={inputStyle} />
-      <TextInput placeholder="Materials used" value={materials} onChangeText={setMaterials} style={inputStyle} />
-      <TextInput placeholder="Origin" value={origin} onChangeText={setOrigin} style={inputStyle} />
-      <TextInput placeholder="Production Date (YYYY-MM-DD)" value={productionDate} onChangeText={setProductionDate} style={inputStyle} />
-      <TextInput placeholder="Description" value={description} onChangeText={setDescription} multiline style={[inputStyle, { height: 100 }]} />
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 40,
+            }}
+          >
+            {/* LEFT COLUMN */}
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", fontFamily:"Montserrat-Regular", marginBottom: 6 }}>
+                PRODUCT NAME*
+              </Text>
+              <TextInput
+                placeholder="Name of your product"
+                value={form.name}
+                onChangeText={(t) => setForm({ ...form, name: t })}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#000",
+                  borderRadius: 12,
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  marginBottom: 20,
+                  backgroundColor: "#fff",
+                  fontFamily:"Montserrat-Regular",
+                  fontSize: 13,
+                }}
+              />
 
-      <Pressable
-        onPress={pickImage}
-        style={{
-          borderWidth: 1.5,
-          borderStyle: "dashed",
-          borderColor: "#999",
-          borderRadius: 10,
-          paddingVertical: 30,
-          alignItems: "center",
-          marginBottom: 18,
-          backgroundColor: "#fafafa",
-        }}
-      >
-        <Text style={{ fontSize: 32, marginBottom: 8 }}>📷</Text>
-        <Text style={{ fontSize: 16, fontWeight: "600", color: "#444" }}>Upload Product Image</Text>
-      </Pressable>
+              <Text style={{ fontSize: 14, fontWeight: "700",fontFamily:"Montserrat-Regular", marginBottom: 6 }}>
+                PRODUCT TYPE*
+              </Text>
+              <TextInput
+                placeholder="What type of handicraft is your product?"
+                value={form.type}
+                onChangeText={(t) => setForm({ ...form, type: t })}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#000",
+                  borderRadius: 12,
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  marginBottom: 20,
+                  backgroundColor: "#fff",
+                  fontFamily:"Montserrat-Regular",
+                  fontSize: 13,
+                }}
+              />
 
-      {product_image && (
-        <Text style={{ fontWeight: "600", textAlign: "center", marginBottom: 10 }}>
-          Uploaded: {product_image.name}
-        </Text>
-      )}
+              <Text style={{ fontSize: 14, fontWeight: "700", fontFamily:"Montserrat-Regular", marginBottom: 6 }}>
+                MATERIALS*
+              </Text>
+              <TextInput
+                placeholder="What materials did you use?"
+                value={form.materials}
+                onChangeText={(t) => setForm({ ...form, materials: t })}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#000",
+                  borderRadius: 12,
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  marginBottom: 20,
+                  backgroundColor: "#fff",
+                  fontFamily:"Montserrat-Regular", 
+                  fontSize: 13,
+                }}
+              />
 
-      <Pressable
-        onPress={handleSubmit}
-        style={{
-          backgroundColor: "#0A84FF",
-          paddingVertical: 14,
-          borderRadius: 10,
-          alignItems: "center",
-        }}
-      >
-        <Text style={{ color: "#fff", fontSize: 18, fontWeight: "600" }}>Submit Product</Text>
-      </Pressable>
+              <Text style={{ fontSize: 14, fontWeight: "700", fontFamily:"Montserrat-Regular", marginBottom: 6 }}>
+                ORIGIN*
+              </Text>
+              <TextInput
+                placeholder="Where is your product from?"
+                value={form.origin}
+                onChangeText={(t) => setForm({ ...form, origin: t })}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#000",
+                  borderRadius: 12,
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  marginBottom: 20,
+                  backgroundColor: "#fff",
+                  fontFamily:"Montserrat-Regular", 
+                  fontSize: 13,
+                }}
+              />
 
-      {statusMessage ? (
-        <Text style={{ textAlign: "center", marginTop: 20, color: "#333", fontWeight: "600" }}>{statusMessage}</Text>
-      ) : null}
-    </ScrollView>
+              <Text style={{ fontSize: 14, fontWeight: "700", fontFamily:"Montserrat-Regular", marginBottom: 6 }}>
+                PRODUCTION DATE*
+              </Text>
+              <TextInput
+                placeholder="When was your product made?"
+                value={form.productionDate}
+                onChangeText={(t) => setForm({ ...form, productionDate: t })}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#000",
+                  borderRadius: 12,
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  marginBottom: 20,
+                  backgroundColor: "#fff",
+                  fontFamily:"Montserrat-Regular", 
+                  fontSize: 13,
+                }}
+              />
+            </View>
+
+            {/* RIGHT COLUMN */}
+            <View style={{ flex: 0.9 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", fontFamily:"Montserrat-Regular", marginBottom: 6 }}>
+                DESCRIPTION*
+              </Text>
+              <TextInput
+                placeholder="Can you describe your product..."
+                multiline
+                value={form.description}
+                onChangeText={(t) => setForm({ ...form, description: t })}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#000",
+                  borderRadius: 12,
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  height: 140,
+                  textAlignVertical: "top",
+                  marginBottom: 36,
+                  backgroundColor: "#fff",
+                  fontFamily:"Montserrat-Regular",
+                  fontSize: 13, 
+                }}
+              />
+
+              <Text style={{ fontSize: 14, fontWeight: "700", fontFamily:"Montserrat-Regular", marginBottom: 6 }}>
+                PRODUCT IMAGE*
+              </Text>
+              <Pressable
+                onPress={pickImage}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#000",
+                  borderRadius: 12,
+                  height: 160,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  backgroundColor: "#fff",
+                  fontFamily:"Montserrat-Regular", 
+                }}
+              >
+                {form.image ? (
+                  <Image
+                    source={{ uri: form.image }}
+                    style={{
+                      width: "100%",
+                      height: 150,
+                      borderRadius: 10,
+                    }}
+                  />
+                ) : (
+                  <>
+                    <Text style={{ fontSize: 36, marginBottom: 6 }}>☁️</Text>
+                    <Text style={{ fontSize: 14, fontFamily:"Montserrat-Regular", }}>
+                      UPLOAD IMAGE
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          </View>
+
+          <Pressable
+            onPress={handleSubmit}
+            style={{
+              backgroundColor: "#e98669",
+              paddingVertical: 14,
+              borderRadius: 20,
+              alignSelf: "center",
+              width: 160,
+              marginTop: 30,
+            }}
+          >
+            <Text
+              style={{
+                color: "#000",
+                fontWeight: "700",
+                fontFamily:"Montserrat-Bold", 
+                textAlign: "center",
+                letterSpacing: 1,
+              }}
+            >
+              SUBMIT
+            </Text>
+          </Pressable>
+        </ScrollView>
+      </View>
+    </ImageBackground>
   );
 }
-
-const inputStyle = {
-  borderWidth: 1,
-  borderColor: "#ccc",
-  padding: 12,
-  borderRadius: 8,
-  marginBottom: 12,
-  backgroundColor: "#fff",
-};

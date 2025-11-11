@@ -4,18 +4,20 @@ export default function Footer() {
   return (
     <View
       style={{
-        backgroundColor: "#1e293b", // dark slate blue
+        position: "absolute", 
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: "rgba(255, 255, 255, 0.01)", 
         paddingVertical: 16,
-        paddingHorizontal: 20,
-        borderTopWidth: 1,
-        borderColor: "#0f172a",
         alignItems: "center",
-        justifyContent: "center",
+        zIndex: 1000,
+        backdropFilter: "blur(10px)", 
       }}
     >
       <Text
         style={{
-          color: "#e2e8f0",
+          color: "#000000",
           fontSize: 14,
           marginBottom: 8,
         }}
@@ -25,13 +27,13 @@ export default function Footer() {
 
       <View style={{ flexDirection: "row", gap: 16 }}>
         <TouchableOpacity onPress={() => Linking.openURL("https://facebook.com")}>
-          <Text style={{ color: "#38bdf8", fontSize: 14 }}>Facebook</Text>
+          <Text style={{ color: "#d6461f", fontSize: 14 }}>Facebook</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => Linking.openURL("https://instagram.com")}>
-          <Text style={{ color: "#38bdf8", fontSize: 14 }}>Instagram</Text>
+          <Text style={{ color: "#d6461f", fontSize: 14 }}>Instagram</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => Linking.openURL("mailto:support@woodcraft.com")}>
-          <Text style={{ color: "#38bdf8", fontSize: 14 }}>Email Us</Text>
+          <Text style={{ color: "#d6461f", fontSize: 14 }}>Email Us</Text>
         </TouchableOpacity>
       </View>
     </View>
